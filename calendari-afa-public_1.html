@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reunions AFA - La Tordera</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --junta: #4A90D9;
+    --junta-light: #EAF3FC;
+    --junta-dark: #2f6fab;
+    --ed: #E8734A;
+    --ed-light: #FDF0EB;
+    --ed-dark: #c4532e;
+    --bg: #ffffff;
+    --surface: #f9f9f7;
+    --border: #e8e8e4;
+    --text: #1a1a1a;
+    --text-muted: #7a7a72;
+    --shadow: 0 2px 12px rgba(0,0,0,0.07);
+    --radius: 10px;
+    --august-bg: #f5f5f3;
+    --august-text: #c0c0b8;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+
+  .header {
+    background: var(--bg);
+    border-bottom: 1.5px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-left h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.5rem;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+  }
+
+  .header-left p {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+    font-weight: 300;
+  }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+
+  .legend-dot {
+    width: 11px; height: 11px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .status-bar {
+    padding: 10px 32px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #22c55e;
+  }
+  .status-dot.loading { background: #f59e0b; animation: pulse 1s infinite; }
+  .status-dot.error { background: #ef4444; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .main {
+    padding: 28px 32px 48px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .months-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+
+  .month-card {
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--bg);
+    transition: box-shadow 0.2s;
+  }
+
+  .month-card:hover { box-shadow: var(--shadow); }
+
+  .month-card.august-card {
+    border-color: #e0e0da;
+    opacity: 0.7;
+  }
+
+  .month-header {
+    padding: 12px 16px;
+    background: var(--surface);
+    border-bottom: 1.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .month-card.august-card .month-header {
+    background: var(--august-bg);
+  }
+
+  .month-header h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1rem;
+    font-weight: 400;
+    text-transform: capitalize;
+  }
+
+  .month-card.august-card .month-header h2 {
+    color: var(--august-text);
+  }
+
+  .august-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--august-text);
+    background: #eaeae6;
+    padding: 2px 7px;
+    border-radius: 20px;
+  }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    padding: 8px;
+    gap: 2px;
+  }
+
+  .day-label {
+    text-align: center;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    padding: 4px 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .month-card.august-card .day-label { color: var(--august-text); }
+
+  .day-cell {
+    min-height: 38px;
+    border-radius: 6px;
+    padding: 3px;
+    position: relative;
+  }
+
+  .day-num {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin: 0 auto;
+    border-radius: 50%;
+  }
+
+  .day-cell.august-day .day-num { color: #d0d0c8; }
+
+  .day-cell.today .day-num {
+    background: var(--text);
+    color: white;
+  }
+
+  .day-cell.has-junta .day-num {
+    background: var(--junta-light);
+    color: var(--junta-dark);
+    font-weight: 700;
+  }
+
+  .day-cell.has-ed .day-num {
+    background: var(--ed-light);
+    color: var(--ed-dark);
+    font-weight: 700;
+  }
+
+  .day-cell.has-junta.has-ed .day-num {
+    background: linear-gradient(135deg, var(--junta-light) 50%, var(--ed-light) 50%);
+    color: var(--junta-dark);
+  }
+
+  /* Tooltip lectura */
+  .meeting-pill {
+    display: block;
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-size: 0.62rem;
+    font-weight: 500;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.5;
+    cursor: default;
+  }
+
+  .meeting-pill.junta {
+    background: var(--junta-light);
+    color: var(--junta-dark);
+    border-left: 2px solid var(--junta);
+  }
+
+  .meeting-pill.ed {
+    background: var(--ed-light);
+    color: var(--ed-dark);
+    border-left: 2px solid var(--ed);
+  }
+
+  /* Tooltip notes */
+  .day-cell.has-meeting:hover .tooltip { display: block; }
+
+  .tooltip {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 6px);
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--text);
+    color: white;
+    font-size: 0.72rem;
+    padding: 6px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    z-index: 50;
+    pointer-events: none;
+    box-shadow: var(--shadow);
+  }
+
+  .tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border: 5px solid transparent;
+    border-top-color: var(--text);
+  }
+
+  .empty { visibility: hidden; }
+
+  @media (max-width: 640px) {
+    .header { padding: 14px 16px; flex-wrap: wrap; gap: 10px; }
+    .main { padding: 16px; }
+    .months-grid { grid-template-columns: 1fr; }
+    .status-bar { padding: 8px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="status-bar">
+  <div class="status-dot loading" id="statusDot"></div>
+  <span id="statusText">Carregant reunions...</span>
+</div>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Reunions AFA · La Tordera</h1>
+    <p>Curs 2025–26</p>
+  </div>
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#4A90D9"></div>
+      Reunió Junta
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#E8734A"></div>
+      Reunió ED
+    </div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="months-grid" id="monthsGrid"></div>
+</div>
+
+<script>
+const SUPABASE_URL = 'https://eytimeabjfmyidknvmau.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5dGltZWFiamZteWlka252bWF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5OTQ0NjgsImV4cCI6MjA5MzU3MDQ2OH0.a7tJzKDmkHeWFJoNOHkOJKh-AEMt16bzish3I29gfII';
+
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let reunions = [];
+
+const MONTHS = [
+  { year: 2025, month: 9 },
+  { year: 2025, month: 10 },
+  { year: 2025, month: 11 },
+  { year: 2025, month: 12 },
+  { year: 2026, month: 1 },
+  { year: 2026, month: 2 },
+  { year: 2026, month: 3 },
+  { year: 2026, month: 4 },
+  { year: 2026, month: 5 },
+  { year: 2026, month: 6 },
+  { year: 2026, month: 7 },
+  { year: 2026, month: 8 },
+];
+
+const DIES = ['Dl','Dt','Dc','Dj','Dv','Ds','Dg'];
+const MESOS = ['','Gener','Febrer','Març','Abril','Maig','Juny','Juliol','Agost','Setembre','Octubre','Novembre','Desembre'];
+
+async function init() {
+  setStatus('loading', 'Carregant reunions...');
+  try {
+    const { data, error } = await db.from('reunions').select('id, titol, data, tipus, notes').order('data', { ascending: true });
+    if (error) throw error;
+    reunions = data || [];
+    renderCalendari();
+    setStatus('ok', `${reunions.length} reunió${reunions.length !== 1 ? 'ns' : ''} programada${reunions.length !== 1 ? 'des' : 'da'}`);
+    scrollToMai2026();
+  } catch (err) {
+    setStatus('error', 'Error de connexió');
+    renderCalendari();
+    scrollToMai2026();
+  }
+}
+
+function scrollToMai2026() {
+  setTimeout(() => {
+    const el = document.getElementById('month-2026-5');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 300);
+}
+
+function renderCalendari() {
+  const grid = document.getElementById('monthsGrid');
+  grid.innerHTML = '';
+  MONTHS.forEach(({ year, month }) => grid.appendChild(buildMonthCard(year, month)));
+}
+
+function buildMonthCard(year, month) {
+  const isAugust = month === 8;
+  const card = document.createElement('div');
+  card.className = 'month-card' + (isAugust ? ' august-card' : '');
+  card.id = `month-${year}-${month}`;
+
+  const header = document.createElement('div');
+  header.className = 'month-header';
+  header.innerHTML = `<h2>${MESOS[month]} ${year}</h2>` +
+    (isAugust ? `<span class="august-badge">No disponible</span>` : '');
+  card.appendChild(header);
+
+  const calGrid = document.createElement('div');
+  calGrid.className = 'cal-grid';
+
+  DIES.forEach(d => {
+    const lbl = document.createElement('div');
+    lbl.className = 'day-label';
+    lbl.textContent = d;
+    calGrid.appendChild(lbl);
+  });
+
+  const firstDate = new Date(year, month - 1, 1);
+  let firstDow = firstDate.getDay();
+  firstDow = firstDow === 0 ? 6 : firstDow - 1;
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const todayStr = dateToStr(new Date());
+
+  for (let i = 0; i < firstDow; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'day-cell empty';
+    calGrid.appendChild(empty);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const cell = document.createElement('div');
+    cell.className = 'day-cell';
+    if (isAugust) cell.classList.add('august-day');
+    if (dateStr === todayStr) cell.classList.add('today');
+
+    const dayMeetings = reunions.filter(r => r.data === dateStr);
+    const hasJunta = dayMeetings.some(r => r.tipus === 'junta');
+    const hasED = dayMeetings.some(r => r.tipus === 'ed');
+    if (hasJunta) { cell.classList.add('has-junta'); cell.classList.add('has-meeting'); }
+    if (hasED) { cell.classList.add('has-ed'); cell.classList.add('has-meeting'); }
+
+    const numSpan = document.createElement('span');
+    numSpan.className = 'day-num';
+    numSpan.textContent = d;
+    cell.appendChild(numSpan);
+
+    if (!isAugust) {
+      dayMeetings.forEach(r => {
+        const pill = document.createElement('span');
+        pill.className = `meeting-pill ${r.tipus}`;
+        pill.textContent = r.titol;
+        cell.appendChild(pill);
+
+        if (r.notes) {
+          const tip = document.createElement('div');
+          tip.className = 'tooltip';
+          tip.textContent = r.notes;
+          cell.appendChild(tip);
+        }
+      });
+    }
+
+    calGrid.appendChild(cell);
+  }
+
+  card.appendChild(calGrid);
+  return card;
+}
+
+function dateToStr(date) {
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}
+
+function setStatus(state, text) {
+  document.getElementById('statusDot').className = 'status-dot' + (state !== 'ok' ? ' ' + state : '');
+  document.getElementById('statusText').textContent = text;
+}
+
+init();
+</script>
+</body>
+</html>

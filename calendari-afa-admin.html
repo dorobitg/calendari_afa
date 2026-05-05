@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="ca">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reunions AFA - La Tordera</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --junta: #4A90D9;
+    --junta-light: #EAF3FC;
+    --junta-dark: #2f6fab;
+    --ed: #E8734A;
+    --ed-light: #FDF0EB;
+    --ed-dark: #c4532e;
+    --bg: #ffffff;
+    --surface: #f9f9f7;
+    --border: #e8e8e4;
+    --text: #1a1a1a;
+    --text-muted: #7a7a72;
+    --shadow: 0 2px 12px rgba(0,0,0,0.07);
+    --shadow-lg: 0 8px 32px rgba(0,0,0,0.12);
+    --radius: 10px;
+    --august-bg: #f5f5f3;
+    --august-text: #c0c0b8;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+  }
+
+  .header {
+    background: var(--bg);
+    border-bottom: 1.5px solid var(--border);
+    padding: 20px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+
+  .header-left h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.5rem;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    color: var(--text);
+  }
+
+  .header-left p {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 2px;
+    font-weight: 300;
+  }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+  }
+
+  .legend {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--text-muted);
+  }
+
+  .legend-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .btn-add {
+    background: var(--text);
+    color: white;
+    border: none;
+    padding: 9px 18px;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s, transform 0.1s;
+  }
+
+  .btn-add:hover { background: #333; transform: translateY(-1px); }
+  .btn-add:active { transform: translateY(0); }
+
+  .status-bar {
+    padding: 10px 32px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: #22c55e;
+  }
+  .status-dot.loading { background: #f59e0b; animation: pulse 1s infinite; }
+  .status-dot.error { background: #ef4444; }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .main {
+    padding: 28px 32px 48px;
+    max-width: 1400px;
+    margin: 0 auto;
+  }
+
+  .months-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+  }
+
+  .month-card {
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: var(--bg);
+    transition: box-shadow 0.2s;
+  }
+
+  .month-card:hover { box-shadow: var(--shadow); }
+
+  .month-card.august-card {
+    border-color: #e0e0da;
+    opacity: 0.7;
+  }
+
+  .month-header {
+    padding: 12px 16px;
+    background: var(--surface);
+    border-bottom: 1.5px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .month-card.august-card .month-header {
+    background: var(--august-bg);
+  }
+
+  .month-header h2 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1rem;
+    font-weight: 400;
+    color: var(--text);
+    text-transform: capitalize;
+  }
+
+  .month-card.august-card .month-header h2 {
+    color: var(--august-text);
+  }
+
+  .august-badge {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--august-text);
+    background: #eaeae6;
+    padding: 2px 7px;
+    border-radius: 20px;
+  }
+
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    padding: 8px;
+    gap: 2px;
+  }
+
+  .month-card.august-card .cal-grid {
+    background: #fafafa;
+  }
+
+  .day-label {
+    text-align: center;
+    font-size: 0.68rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    padding: 4px 2px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .month-card.august-card .day-label {
+    color: var(--august-text);
+  }
+
+  .day-cell {
+    min-height: 38px;
+    border-radius: 6px;
+    padding: 3px;
+    position: relative;
+    transition: background 0.1s;
+  }
+
+  .day-cell:not(.empty):not(.august-day):hover {
+    background: var(--surface);
+    cursor: pointer;
+  }
+
+  .day-cell.august-day {
+    cursor: default;
+  }
+
+  .day-num {
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 20px;
+    height: 20px;
+    margin: 0 auto;
+    border-radius: 50%;
+  }
+
+  .day-cell.august-day .day-num {
+    color: #d0d0c8;
+  }
+
+  .day-cell.today .day-num {
+    background: var(--text);
+    color: white;
+  }
+
+  /* Número del dia acolorit si té reunió */
+  .day-cell.has-junta .day-num {
+    background: var(--junta-light);
+    color: var(--junta-dark);
+    font-weight: 700;
+  }
+
+  .day-cell.has-ed .day-num {
+    background: var(--ed-light);
+    color: var(--ed-dark);
+    font-weight: 700;
+  }
+
+  /* Si té els dos tipus, prioritzem junta */
+  .day-cell.has-junta.has-ed .day-num {
+    background: linear-gradient(135deg, var(--junta-light) 50%, var(--ed-light) 50%);
+    color: var(--junta-dark);
+  }
+
+  .meeting-pill {
+    display: block;
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-size: 0.62rem;
+    font-weight: 500;
+    margin-top: 2px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
+    transition: opacity 0.1s, transform 0.1s;
+    line-height: 1.5;
+  }
+
+  .meeting-pill:hover { opacity: 0.85; transform: translateY(-1px); }
+
+  .meeting-pill.junta {
+    background: var(--junta-light);
+    color: var(--junta-dark);
+    border-left: 2px solid var(--junta);
+  }
+
+  .meeting-pill.ed {
+    background: var(--ed-light);
+    color: var(--ed-dark);
+    border-left: 2px solid var(--ed);
+  }
+
+  .empty { visibility: hidden; }
+
+  /* MODAL */
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.35);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(2px);
+  }
+  .modal-overlay.open { display: flex; }
+
+  .modal {
+    background: white;
+    border-radius: 14px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+    animation: modalIn 0.2s ease;
+  }
+
+  @keyframes modalIn {
+    from { transform: translateY(12px) scale(0.98); opacity: 0; }
+    to { transform: translateY(0) scale(1); opacity: 1; }
+  }
+
+  .modal-header {
+    padding: 20px 24px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  .modal-header h3 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 1.1rem;
+    font-weight: 400;
+  }
+
+  .btn-close {
+    background: none;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    line-height: 1;
+    padding: 2px 6px;
+    border-radius: 4px;
+    transition: background 0.1s;
+  }
+  .btn-close:hover { background: var(--surface); }
+
+  .modal-body { padding: 20px 24px; }
+
+  .form-group { margin-bottom: 16px; }
+
+  .form-group label {
+    display: block;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .form-group input,
+  .form-group textarea {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1.5px solid var(--border);
+    border-radius: 7px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    color: var(--text);
+    background: white;
+    transition: border-color 0.15s;
+    outline: none;
+  }
+
+  .form-group input:focus,
+  .form-group textarea:focus { border-color: var(--text); }
+
+  .form-group textarea { resize: vertical; min-height: 70px; }
+
+  .tipo-selector { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+  .tipo-btn {
+    padding: 10px;
+    border-radius: 8px;
+    border: 2px solid var(--border);
+    background: white;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: all 0.15s;
+    text-align: center;
+  }
+
+  .tipo-btn.junta.active { border-color: var(--junta); background: var(--junta-light); color: var(--junta-dark); }
+  .tipo-btn.ed.active { border-color: var(--ed); background: var(--ed-light); color: var(--ed-dark); }
+  .tipo-btn:not(.active):hover { border-color: #ccc; background: var(--surface); }
+
+  .modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 8px;
+    align-items: center;
+  }
+
+  .btn {
+    padding: 9px 18px;
+    border-radius: 7px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+    transition: all 0.15s;
+  }
+
+  .btn-primary { background: var(--text); color: white; }
+  .btn-primary:hover { background: #333; }
+  .btn-secondary { background: var(--surface); color: var(--text); border: 1.5px solid var(--border); }
+  .btn-secondary:hover { background: #eee; }
+  .btn-danger { background: none; color: #ef4444; border: 1.5px solid #fecaca; margin-right: auto; }
+  .btn-danger:hover { background: #fef2f2; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--text);
+    color: white;
+    padding: 12px 18px;
+    border-radius: 9px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    z-index: 2000;
+    opacity: 0;
+    transform: translateY(8px);
+    transition: all 0.25s;
+    pointer-events: none;
+    max-width: 300px;
+  }
+  .toast.show { opacity: 1; transform: translateY(0); }
+  .toast.error { background: #ef4444; }
+  .toast.success { background: #22c55e; }
+
+  @media (max-width: 640px) {
+    .header { padding: 14px 16px; flex-wrap: wrap; gap: 10px; }
+    .main { padding: 16px; }
+    .months-grid { grid-template-columns: 1fr; }
+    .status-bar { padding: 8px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="status-bar">
+  <div class="status-dot loading" id="statusDot"></div>
+  <span id="statusText">Carregant reunions...</span>
+</div>
+
+<div class="header">
+  <div class="header-left">
+    <h1>Reunions AFA · La Tordera</h1>
+    <p>Curs 2025–26</p>
+  </div>
+  <div class="header-right">
+    <div class="legend">
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#4A90D9"></div>
+        Reunió Junta
+      </div>
+      <div class="legend-item">
+        <div class="legend-dot" style="background:#E8734A"></div>
+        Reunió ED
+      </div>
+    </div>
+    <button class="btn-add" onclick="openAddModal()">+ Nova reunió</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="months-grid" id="monthsGrid"></div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="handleOverlayClick(event)">
+  <div class="modal">
+    <div class="modal-header">
+      <h3 id="modalTitle">Nova Reunió</h3>
+      <button class="btn-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label>Data</label>
+        <input type="date" id="fieldData" />
+      </div>
+      <div class="form-group">
+        <label>Títol</label>
+        <input type="text" id="fieldTitol" placeholder="Títol de la reunió..." />
+      </div>
+      <div class="form-group">
+        <label>Tipus</label>
+        <div class="tipo-selector">
+          <button class="tipo-btn junta active" id="btnJunta" onclick="selectTipus('junta')">Junta</button>
+          <button class="tipo-btn ed" id="btnED" onclick="selectTipus('ed')">ED</button>
+        </div>
+      </div>
+      <div class="form-group">
+        <label>Notes <span style="font-weight:300;text-transform:none">(opcional)</span></label>
+        <textarea id="fieldNotes" placeholder="Notes addicionals..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger" id="btnEliminar" onclick="eliminarReunio()" style="display:none">Eliminar</button>
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel·lar</button>
+      <button class="btn btn-primary" onclick="guardarReunio()">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const SUPABASE_URL = 'https://eytimeabjfmyidknvmau.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV5dGltZWFiamZteWlka252bWF1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc5OTQ0NjgsImV4cCI6MjA5MzU3MDQ2OH0.a7tJzKDmkHeWFJoNOHkOJKh-AEMt16bzish3I29gfII';
+
+const { createClient } = supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_KEY);
+
+let reunions = [];
+let editingId = null;
+let selectedTipus = 'junta';
+
+const MONTHS = [
+  { year: 2025, month: 9 },
+  { year: 2025, month: 10 },
+  { year: 2025, month: 11 },
+  { year: 2025, month: 12 },
+  { year: 2026, month: 1 },
+  { year: 2026, month: 2 },
+  { year: 2026, month: 3 },
+  { year: 2026, month: 4 },
+  { year: 2026, month: 5 },
+  { year: 2026, month: 6 },
+  { year: 2026, month: 7 },
+  { year: 2026, month: 8 },  // Agost en gris
+];
+
+const DIES = ['Dl','Dt','Dc','Dj','Dv','Ds','Dg'];
+const MESOS = ['','Gener','Febrer','Març','Abril','Maig','Juny','Juliol','Agost','Setembre','Octubre','Novembre','Desembre'];
+
+async function init() {
+  setStatus('loading', 'Carregant reunions...');
+  try {
+    const { data, error } = await db.from('reunions').select('*').order('data', { ascending: true });
+    if (error) throw error;
+    reunions = data || [];
+    renderCalendari();
+    setStatus('ok', `${reunions.length} reunió${reunions.length !== 1 ? 'ns' : ''} carregada${reunions.length !== 1 ? 's' : ''}`);
+    scrollToMai2026();
+  } catch (err) {
+    setStatus('error', 'Error de connexió');
+    showToast('Error carregant les dades: ' + err.message, 'error');
+    renderCalendari();
+    scrollToMai2026();
+  }
+}
+
+function scrollToMai2026() {
+  setTimeout(() => {
+    const el = document.getElementById('month-2026-5');
+    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, 300);
+}
+
+function renderCalendari() {
+  const grid = document.getElementById('monthsGrid');
+  grid.innerHTML = '';
+  MONTHS.forEach(({ year, month }) => {
+    const card = buildMonthCard(year, month);
+    grid.appendChild(card);
+  });
+}
+
+function buildMonthCard(year, month) {
+  const isAugust = month === 8;
+  const card = document.createElement('div');
+  card.className = 'month-card' + (isAugust ? ' august-card' : '');
+  card.id = `month-${year}-${month}`;
+
+  const header = document.createElement('div');
+  header.className = 'month-header';
+  header.innerHTML = `<h2>${MESOS[month]} ${year}</h2>` +
+    (isAugust ? `<span class="august-badge">No disponible</span>` : '');
+  card.appendChild(header);
+
+  const calGrid = document.createElement('div');
+  calGrid.className = 'cal-grid';
+
+  DIES.forEach(d => {
+    const lbl = document.createElement('div');
+    lbl.className = 'day-label';
+    lbl.textContent = d;
+    calGrid.appendChild(lbl);
+  });
+
+  const firstDate = new Date(year, month - 1, 1);
+  let firstDow = firstDate.getDay();
+  firstDow = firstDow === 0 ? 6 : firstDow - 1;
+  const daysInMonth = new Date(year, month, 0).getDate();
+  const todayStr = dateToStr(new Date());
+
+  for (let i = 0; i < firstDow; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'day-cell empty';
+    calGrid.appendChild(empty);
+  }
+
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(month).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const cell = document.createElement('div');
+    cell.className = 'day-cell';
+    if (isAugust) cell.classList.add('august-day');
+    if (dateStr === todayStr) cell.classList.add('today');
+
+    const dayMeetings = reunions.filter(r => r.data === dateStr);
+    const hasJunta = dayMeetings.some(r => r.tipus === 'junta');
+    const hasED = dayMeetings.some(r => r.tipus === 'ed');
+    if (hasJunta) cell.classList.add('has-junta');
+    if (hasED) cell.classList.add('has-ed');
+
+    const numSpan = document.createElement('span');
+    numSpan.className = 'day-num';
+    numSpan.textContent = d;
+    cell.appendChild(numSpan);
+
+    if (!isAugust) {
+      dayMeetings.forEach(r => {
+        const pill = document.createElement('span');
+        pill.className = `meeting-pill ${r.tipus}`;
+        pill.textContent = r.titol;
+        pill.title = r.notes || r.titol;
+        pill.onclick = (e) => { e.stopPropagation(); openEditModal(r); };
+        cell.appendChild(pill);
+      });
+
+      cell.onclick = () => { if (dayMeetings.length === 0) openAddModal(dateStr); };
+    }
+
+    calGrid.appendChild(cell);
+  }
+
+  card.appendChild(calGrid);
+  return card;
+}
+
+function dateToStr(date) {
+  return `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')}`;
+}
+
+function openAddModal(dateStr = '') {
+  editingId = null;
+  document.getElementById('modalTitle').textContent = 'Nova Reunió';
+  document.getElementById('fieldData').value = dateStr;
+  document.getElementById('fieldTitol').value = '';
+  document.getElementById('fieldNotes').value = '';
+  document.getElementById('btnEliminar').style.display = 'none';
+  selectTipus('junta');
+  document.getElementById('modalOverlay').classList.add('open');
+  setTimeout(() => document.getElementById('fieldTitol').focus(), 100);
+}
+
+function openEditModal(r) {
+  editingId = r.id;
+  document.getElementById('modalTitle').textContent = 'Editar Reunió';
+  document.getElementById('fieldData').value = r.data;
+  document.getElementById('fieldTitol').value = r.titol;
+  document.getElementById('fieldNotes').value = r.notes || '';
+  document.getElementById('btnEliminar').style.display = 'block';
+  selectTipus(r.tipus);
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+  editingId = null;
+}
+
+function handleOverlayClick(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+function selectTipus(tipus) {
+  selectedTipus = tipus;
+  document.getElementById('btnJunta').classList.toggle('active', tipus === 'junta');
+  document.getElementById('btnED').classList.toggle('active', tipus === 'ed');
+}
+
+async function guardarReunio() {
+  const data = document.getElementById('fieldData').value;
+  const titol = document.getElementById('fieldTitol').value.trim();
+  const notes = document.getElementById('fieldNotes').value.trim();
+
+  if (!data || !titol) { showToast('Cal omplir la data i el títol', 'error'); return; }
+
+  const payload = { data, titol, tipus: selectedTipus, notes: notes || null };
+
+  try {
+    if (editingId) {
+      const { error } = await db.from('reunions').update(payload).eq('id', editingId);
+      if (error) throw error;
+      const idx = reunions.findIndex(r => r.id === editingId);
+      if (idx !== -1) reunions[idx] = { ...reunions[idx], ...payload };
+      showToast('Reunió actualitzada ✓', 'success');
+    } else {
+      const { data: inserted, error } = await db.from('reunions').insert([payload]).select().single();
+      if (error) throw error;
+      reunions.push(inserted);
+      showToast('Reunió afegida ✓', 'success');
+    }
+    closeModal();
+    renderCalendari();
+    updateStatusCount();
+  } catch (err) {
+    showToast('Error guardant: ' + err.message, 'error');
+  }
+}
+
+async function eliminarReunio() {
+  if (!editingId) return;
+  if (!confirm('Segur que vols eliminar aquesta reunió?')) return;
+  try {
+    const { error } = await db.from('reunions').delete().eq('id', editingId);
+    if (error) throw error;
+    reunions = reunions.filter(r => r.id !== editingId);
+    closeModal();
+    renderCalendari();
+    updateStatusCount();
+    showToast('Reunió eliminada', 'success');
+  } catch (err) {
+    showToast('Error eliminant: ' + err.message, 'error');
+  }
+}
+
+function setStatus(state, text) {
+  document.getElementById('statusDot').className = 'status-dot' + (state !== 'ok' ? ' ' + state : '');
+  document.getElementById('statusText').textContent = text;
+}
+
+function updateStatusCount() {
+  setStatus('ok', `${reunions.length} reunió${reunions.length !== 1 ? 'ns' : ''} carregada${reunions.length !== 1 ? 's' : ''}`);
+}
+
+function showToast(msg, type = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (type ? ' ' + type : '');
+  setTimeout(() => { t.className = 'toast'; }, 3000);
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+init();
+</script>
+</body>
+</html>
